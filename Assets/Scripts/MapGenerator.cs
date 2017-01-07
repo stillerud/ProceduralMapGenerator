@@ -5,7 +5,7 @@ using UnityEngine;
 // Map generator class
 public class MapGenerator : MonoBehaviour {
 
-	public enum DrawMode {NoiseMap, ColourMap};
+	public enum DrawMode {NoiseMap, ColourMap, Mesh};
 	public DrawMode drawMode;
 
 	// Public variables to control the map generation and noise map
@@ -43,11 +43,14 @@ public class MapGenerator : MonoBehaviour {
 			}
 		}
 
+		// Different display modes to draw in the scene
 		MapDisplay display = FindObjectOfType<MapDisplay> ();
 		if (drawMode == DrawMode.NoiseMap) {
 			display.DrawTexture (TextureGenerator.TextureFromHeightMap(noiseMap));
 		} else if (drawMode == DrawMode.ColourMap) {
 			display.DrawTexture (TextureGenerator.TextureFromColourMap (colourmMap, mapWidth, mapHeight));
+		} else if (drawMode == DrawMode.Mesh) {
+			display.DrawMesh (MeshGenerator.GenerateTerrainMesh(noiseMap), TextureGenerator.TextureFromColourMap (colourmMap, mapWidth, mapHeight));
 		}
 	}
 
@@ -68,6 +71,7 @@ public class MapGenerator : MonoBehaviour {
 	}
 }
 
+// Data struct that hold the terrain region data
 [System.Serializable]
 public struct TerrainType {
 	public string name;
