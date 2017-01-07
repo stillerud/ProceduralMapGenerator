@@ -6,3 +6,4 @@ Temp/
 # Files to ignore
 
 *.dll
+*.log
