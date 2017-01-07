@@ -9,7 +9,7 @@ public class MapGenerator : MonoBehaviour {
 	public DrawMode drawMode;
 
 	// Public variables to control the map generation and noise map
-	const int mapChunkSize = 241; // max
+	public const int mapChunkSize = 241; // max
 	[Range(0,6)]
 	public int levelOfDetail;
 	public float noiseScale;
