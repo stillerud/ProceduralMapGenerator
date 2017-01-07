@@ -1,9 +1,33 @@
-# Folders to ignore
-
+# =============== #
+# Unity generated #
+# =============== #
 Temp/
+Library/
 
-
-# Files to ignore
-
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+ExportedObj/
+obj/
+*.svd
+*.userprefs
+/*.csproj
+*.pidb
+*.suo
+/*.sln
+*.user
+*.unityproj
+*.booproj
 *.dll
 *.log
+
+# ============ #
+# OS generated #
+# ============ #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
