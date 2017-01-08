@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Class that display textures or meshes
+/// <summary>
+/// Class that display textures or meshes
+/// </summary>
 public class MapDisplay : MonoBehaviour {
 
 	public Renderer textureRender;

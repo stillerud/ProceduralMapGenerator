@@ -9,10 +9,12 @@ using System.Threading;
 /// </summary>
 public class MapGenerator : MonoBehaviour {
 
+	// Public variables to control the map generation and noise map
 	public enum DrawMode {NoiseMap, ColourMap, Mesh};
 	public DrawMode drawMode;
 
-	// Public variables to control the map generation and noise map
+	public Noise.NormalizeMode normalizeMode;
+
 	public const int mapChunkSize = 241; // max
 	[Range(0,6)]
 	public int editorPreviewLOD;
@@ -127,16 +129,17 @@ public class MapGenerator : MonoBehaviour {
 	/// </summary>
 	/// <returns>Returns a MapData struct containing the generated noise and colour map.</returns>
 	MapData GenerateMapData(Vector2 centre) {
-		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistence, lacunarity, centre + offset);
+		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistence, lacunarity, centre + offset, normalizeMode);
 
-		// Loop through each terrain type region and assign colour to our colour map
+		// Loop through each terrain type region and assign colours to our colour map based on user list
 		Color[] colourMap = new Color[mapChunkSize * mapChunkSize];
 		for (int y = 0; y < mapChunkSize; y++) {
 			for (int x = 0; x < mapChunkSize; x++) {
 				float currentHeight = noiseMap [x, y];
 				for (int i = 0; i < regions.Length; i++) {
-					if (currentHeight <= regions [i].height) {
+					if (currentHeight >= regions [i].height) {
 						colourMap [y * mapChunkSize + x] = regions [i].colour;
+					} else {
 						break;
 					}
 				}
