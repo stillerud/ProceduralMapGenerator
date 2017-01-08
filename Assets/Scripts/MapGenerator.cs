@@ -15,7 +15,7 @@ public class MapGenerator : MonoBehaviour {
 	// Public variables to control the map generation and noise map
 	public const int mapChunkSize = 241; // max
 	[Range(0,6)]
-	public int levelOfDetail;
+	public int editorPreviewLOD;
 	public float noiseScale;
 
 	public int octaves;
@@ -41,7 +41,7 @@ public class MapGenerator : MonoBehaviour {
 	/// Chooses what to show in editor based on the DrawMode enumorator.
 	/// </summary>
 	public void DrawMapInEditor() {
-		MapData mapData = GenerateMapData ();
+		MapData mapData = GenerateMapData (Vector2.zero);
 
 		MapDisplay display = FindObjectOfType<MapDisplay> ();
 		if (drawMode == DrawMode.NoiseMap) {
@@ -49,7 +49,7 @@ public class MapGenerator : MonoBehaviour {
 		} else if (drawMode == DrawMode.ColourMap) {
 			display.DrawTexture (TextureGenerator.TextureFromColourMap (mapData.colourMap, mapChunkSize, mapChunkSize));
 		} else if (drawMode == DrawMode.Mesh) {
-			display.DrawMesh (MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColourMap (mapData.colourMap, mapChunkSize, mapChunkSize));
+			display.DrawMesh (MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColourMap (mapData.colourMap, mapChunkSize, mapChunkSize));
 		}
 	}
 
@@ -57,9 +57,9 @@ public class MapGenerator : MonoBehaviour {
 	/// Method that requests map data by spawning a new thread.
 	/// </summary>
 	/// <param name="callback">Callback.</param>
-	public void RequestMapData(Action<MapData> callback) {
+	public void RequestMapData(Vector2 centre, Action<MapData> callback) {
 		ThreadStart threadStart = delegate {
-			MapDataThread (callback);
+			MapDataThread (centre, callback);
 		};
 
 		new Thread (threadStart).Start ();
@@ -69,8 +69,8 @@ public class MapGenerator : MonoBehaviour {
 	/// Thread that generates map data and adds it to the callback queue.
 	/// </summary>
 	/// <param name="callback">Callback.</param>
-	void MapDataThread(Action<MapData> callback) {
-		MapData mapData = GenerateMapData ();
+	void MapDataThread(Vector2 centre, Action<MapData> callback) {
+		MapData mapData = GenerateMapData (centre);
 		lock (mapDataThreadInfoQueue) {
 			mapDataThreadInfoQueue.Enqueue (new MapThreadInfo<MapData> (callback, mapData));
 		}
@@ -80,29 +80,31 @@ public class MapGenerator : MonoBehaviour {
 	/// Method that requests mesh data by spawning a new thread with the map data.
 	/// </summary>
 	/// <param name="mapData">Map data.</param>
+	/// <param name="lod">Level Of detail.</param>
 	/// <param name="callback">Callback.</param>
-	public void RequestMeshData(MapData mapData, Action<MeshData> callback) {
+	public void RequestMeshData(MapData mapData,int lod, Action<MeshData> callback) {
 		ThreadStart threadstart = delegate {
-			MeshDataThread (mapData, callback);
+			MeshDataThread (mapData, lod, callback);
 		};
 
 		new Thread (threadstart).Start ();
 	}
 
+
 	/// <summary>
 	/// Thread that generates mesh data and adds it to the callback queue.
 	/// </summary>
 	/// <param name="mapData">Map data.</param>
+	/// <param name="lod">Level of detail.</param>
 	/// <param name="callback">Callback.</param>
-	void MeshDataThread(MapData mapData, Action<MeshData> callback) {
-		MeshData meshData = MeshGenerator.GenerateTerrainMesh (mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail);
+	void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback) {
+		MeshData meshData = MeshGenerator.GenerateTerrainMesh (mapData.heightMap, meshHeightMultiplier, meshHeightCurve, lod);
 		lock (meshDataThreadInfoQueue) {
 			meshDataThreadInfoQueue.Enqueue (new MapThreadInfo<MeshData>(callback, meshData));
 		}
 	}
 
 	void  Update() {
-
 		// Loop through any items in our map callback queue and ask them to call their callback method with map data.
 		if (mapDataThreadInfoQueue.Count > 0) {
 			for (int i = 0; i < mapDataThreadInfoQueue.Count; i++) {
@@ -124,8 +126,8 @@ public class MapGenerator : MonoBehaviour {
 	/// Method that generate the map by a perling noise map.
 	/// </summary>
 	/// <returns>Returns a MapData struct containing the generated noise and colour map.</returns>
-	MapData GenerateMapData() {
-		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistence, lacunarity, offset);
+	MapData GenerateMapData(Vector2 centre) {
+		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistence, lacunarity, centre + offset);
 
 		// Loop through each terrain type region and assign colour to our colour map
 		Color[] colourMap = new Color[mapChunkSize * mapChunkSize];
