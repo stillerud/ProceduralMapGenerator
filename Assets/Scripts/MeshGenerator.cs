@@ -17,32 +17,61 @@ public static class MeshGenerator {
 	/// <param name="levelOfDetail">Level of detail.</param>
 	public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve _heightCurve, int levelOfDetail){
 		AnimationCurve heightCurve = new AnimationCurve (_heightCurve.keys);
-		
-		int width = heightMap.GetLength (0);
-		int height = heightMap.GetLength (1);
-
-		// Center the mesh
-		float topLeftX = (width - 1) / -2f;
-		float topLeftZ = (height - 1) / 2f;
 
 		int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2; // if short hand to clamp it to 1
-		int verticesPerLine = (width - 1) / meshSimplificationIncrement + 1;
 
-		MeshData meshData = new MeshData (verticesPerLine, verticesPerLine);
-		int vertexIndex = 0;
+		int borderedSize = heightMap.GetLength (0);
+		int meshSize = borderedSize - 2*meshSimplificationIncrement;
+		int meshSizeUnsimplified = borderedSize - 2;
+
+		// Center the mesh
+		float topLeftX = (meshSizeUnsimplified - 1) / -2f;
+		float topLeftZ = (meshSizeUnsimplified - 1) / 2f;
+
+		int verticesPerLine = (meshSize - 1) / meshSimplificationIncrement + 1;
+
+		MeshData meshData = new MeshData (verticesPerLine);
+
+		int[,] vertexIndicesMap = new int[borderedSize, borderedSize];
+		int meshVertexIndex = 0;
+		int borderVertexIndex = -1;
 
 		// Loops through all vertices and generate the terrain mesh
-		for (int y = 0; y < height; y += meshSimplificationIncrement) {
-			for (int x = 0; x < width; x += meshSimplificationIncrement) {
+		for (int y = 0; y < borderedSize; y += meshSimplificationIncrement) {
+			for (int x = 0; x < borderedSize; x += meshSimplificationIncrement) {
+				bool isBorderVertex = y == 0 || y == borderedSize - 1 || x == 0 || x == borderedSize - 1;
 
+				if (isBorderVertex) {
+					vertexIndicesMap [x, y] = borderVertexIndex;
+					borderVertexIndex--;
+				} else {
+					vertexIndicesMap [x, y] = meshVertexIndex;
+					meshVertexIndex++;
+				}
+			}
+		}
+
+		// Loops through all vertices and generate the terrain mesh
+		for (int y = 0; y < borderedSize; y += meshSimplificationIncrement) {
+			for (int x = 0; x < borderedSize; x += meshSimplificationIncrement) {
 				// Create vertices with positions based on heighmap
-				meshData.vertices [vertexIndex] = new Vector3 (topLeftX + x, heightCurve.Evaluate(heightMap [x, y]) * heightMultiplier, topLeftZ - y); 
-				meshData.uvs [vertexIndex] = new Vector2 (x / (float)width, y / (float)height);
+				int vertexIndex = vertexIndicesMap [x, y];
+				Vector2 percent = new Vector2 ((x-meshSimplificationIncrement) / (float)meshSize, (y-meshSimplificationIncrement) / (float)meshSize);
+				float height = heightCurve.Evaluate (heightMap [x, y]) * heightMultiplier;
+				Vector3 vertexPosition = new Vector3 (topLeftX + percent.x * meshSizeUnsimplified, height, topLeftZ - percent.y * meshSizeUnsimplified); 
+
+				meshData.AddVertex (vertexPosition, percent, vertexIndex);
 
 				// Generate meh triangles, but ignore bottom and left edges
-				if (x < width - 1 && y < height - 1) {
-					meshData.AddTriangles (vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine); // First triangle
-					meshData.AddTriangles (vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1); // Second triangle
+				if (x < borderedSize - 1 && y < borderedSize - 1) {
+					int a = vertexIndicesMap [x, y];
+					int b = vertexIndicesMap [x + meshSimplificationIncrement, y];
+					int c = vertexIndicesMap [x, y + meshSimplificationIncrement];
+					int d = vertexIndicesMap [x + meshSimplificationIncrement, y + meshSimplificationIncrement];
+
+					// Polygon with triangles following a clockwise order(?)
+					meshData.AddTriangles (a, d, c); // First triangle
+					meshData.AddTriangles (d, a, b); // Second triangle
 				}
 
 				vertexIndex++;
@@ -56,22 +85,38 @@ public static class MeshGenerator {
 /// <summary>
 /// Mesh data class.
 /// </summary>
-public class MeshData : MonoBehaviour {
-	public Vector3[] vertices;
-	public int[] triangles;
-	public Vector2[] uvs;
+public class MeshData {
+	Vector3[] vertices;
+	int[] triangles;
+	Vector2[] uvs;
+
+	Vector3[] borderVertices;
+	int[] borderTriangles;
 
 	int trianglesIndex;
+	int borderTriangleIndex;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="MeshData"/> class.
 	/// </summary>
 	/// <param name="meshWidth">Width of the mesh.</param>
 	/// <param name="meshHeght">Heght of the mesh.</param>
-	public MeshData(int meshWidth, int meshHeght) {
-		vertices = new Vector3[meshWidth * meshHeght];
-		uvs = new Vector2[meshWidth * meshHeght];
-		triangles = new int[(meshWidth - 1) * (meshHeght - 1) * 6];
+	public MeshData(int verticesPerLine) {
+		vertices = new Vector3[verticesPerLine * verticesPerLine];
+		uvs = new Vector2[verticesPerLine * verticesPerLine];
+		triangles = new int[(verticesPerLine - 1) * (verticesPerLine - 1) * 6];
+
+		borderVertices = new Vector3[verticesPerLine * 4 + 4];
+		borderTriangles = new int[24 * verticesPerLine]; // 6 * 4 * vertices per line
+	}
+
+	public void AddVertex(Vector3 vertexPosition, Vector2 uv, int vertexIndex){
+		if (vertexIndex < 0) {
+			borderVertices [-vertexIndex - 1] = vertexPosition; // boarderd vertices are negative and start at -1.
+		} else {
+			vertices [vertexIndex] = vertexPosition;
+			uvs [vertexIndex] = uv;
+		}
 	}
 
 	/// <summary>
@@ -81,10 +126,17 @@ public class MeshData : MonoBehaviour {
 	/// <param name="b">Second vertex index.</param>
 	/// <param name="c">Third vertex index.</param>
 	public void AddTriangles( int a, int b, int c) {
-		triangles[trianglesIndex] = a;
-		triangles[trianglesIndex+1] = b;
-		triangles[trianglesIndex+2] = c;
-		trianglesIndex+=3;
+		if (a < 0 || b < 0 || c < 0) { // border triangle
+			borderTriangles [borderTriangleIndex] = a;
+			borderTriangles [borderTriangleIndex + 1] = b;
+			borderTriangles [borderTriangleIndex + 2] = c;
+			borderTriangleIndex += 3;
+		} else {
+			triangles [trianglesIndex] = a;
+			triangles [trianglesIndex + 1] = b;
+			triangles [trianglesIndex + 2] = c;
+			trianglesIndex += 3;
+		}
 	}
 
 	Vector3[] CalculateNormals() {
@@ -104,6 +156,27 @@ public class MeshData : MonoBehaviour {
 			vertexNormals [vertexIndexC] += triangleNormal;
 		}
 
+		int borderTriangleCount = borderTriangles.Length / 3;
+
+		// Loop through all triangles and calculate their vertex normals
+		for (int i = 0; i < borderTriangleCount; i++) {
+			int normalTriangleIndex = i * 3;
+			int vertexIndexA = borderTriangles [normalTriangleIndex];
+			int vertexIndexB = borderTriangles [normalTriangleIndex + 1];
+			int vertexIndexC = borderTriangles [normalTriangleIndex + 2];
+
+			Vector3 triangleNormal = SurfaceNormalFromIndices (vertexIndexA, vertexIndexB, vertexIndexC);
+			if (vertexIndexA >= 0) {
+				vertexNormals [vertexIndexA] += triangleNormal;
+			}
+			if (vertexIndexB >= 0) {
+				vertexNormals [vertexIndexB] += triangleNormal;
+			}
+			if (vertexIndexC >= 0) {
+				vertexNormals [vertexIndexC] += triangleNormal;
+			}
+		}
+
 		// Normalize all vertex normals
 		for (int i = 0; i < vertexNormals.Length; i++) {
 			vertexNormals [i].Normalize ();
@@ -120,35 +193,15 @@ public class MeshData : MonoBehaviour {
 	/// <param name="indexB">Index b.</param>
 	/// <param name="indexC">Index c.</param>
 	Vector3 SurfaceNormalFromIndices(int indexA, int indexB, int indexC) {
-		Vector3 pointA = vertices [indexA];
-		Vector3 pointB = vertices [indexB];
-		Vector3 pointC = vertices [indexC];
+		Vector3 pointA = (indexA < 0) ? borderVertices [-indexA - 1] : vertices [indexA];
+		Vector3 pointB = (indexB < 0) ? borderVertices [-indexB - 1] : vertices [indexB];
+		Vector3 pointC = (indexC < 0) ? borderVertices [-indexC - 1] : vertices [indexC];
 
 		Vector3 sideAB = pointB - pointA;
 		Vector3 sideAC = pointC - pointA;
 		return Vector3.Cross (sideAB, sideAC).normalized;
 		//return Vector3.Cross (sideAC, sideAB).normalized;
 	}
-
-
-	void printMeshInfo(Mesh mesh){
-		for (int i = 0; i < 100; i+=3) {
-			string meshInfo = "### MeshInfo: ###\n";
-			meshInfo += "i: " + i + ", ";
-			meshInfo += "verts: ";
-			meshInfo += mesh.triangles [i] + ": " + mesh.vertices [i] + ", ";
-			meshInfo += mesh.triangles [i+1] + "; " + mesh.vertices [i+1] + ", ";
-			meshInfo += mesh.triangles [i+2] + ": " + mesh.vertices [i+2] + ", ";
-			meshInfo += "normals: ";
-			meshInfo += mesh.normals [i] + ", ";
-			meshInfo += mesh.normals [i+1] + ", ";
-			meshInfo += mesh.normals [i+2] + ", ";
-			//meshInfo += "#######";
-
-			print (meshInfo);
-		}
-	
-	} 
 
 	/// <summary>
 	/// Creates a mesh.

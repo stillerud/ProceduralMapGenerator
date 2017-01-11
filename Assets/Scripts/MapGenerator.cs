@@ -15,7 +15,7 @@ public class MapGenerator : MonoBehaviour {
 
 	public Noise.NormalizeMode normalizeMode;
 
-	public const int mapChunkSize = 241; // max
+	public const int mapChunkSize = 239; // max - compansated for border (-2)
 	[Range(0,6)]
 	public int editorPreviewLOD;
 	public float noiseScale;
@@ -139,7 +139,7 @@ public class MapGenerator : MonoBehaviour {
 	/// </summary>
 	/// <returns>Returns a MapData struct containing the generated noise and colour map.</returns>
 	MapData GenerateMapData(Vector2 centre) {
-		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistence, lacunarity, centre + offset, normalizeMode);
+		float[,] noiseMap = Noise.GenerateNoiseMap (mapChunkSize+2, mapChunkSize+2, seed, noiseScale, octaves, persistence, lacunarity, centre + offset, normalizeMode); // +2: compansate for border!
 
 		// Loop through each terrain type region and assign colours to our colour map based on user list
 		Color[] colourMap = new Color[mapChunkSize * mapChunkSize];
