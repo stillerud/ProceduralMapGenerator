@@ -1,6 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2008
 
+Project("{01568A56-34CC-846F-A1AD-D30AF1938769}") = "ProceduralMapGenerator", "Assembly-CSharp-firstpass.csproj", "{83A86F1C-BC24-7270-61CE-2B6C0A23F70C}"
+EndProject
 Project("{01568A56-34CC-846F-A1AD-D30AF1938769}") = "ProceduralMapGenerator", "Assembly-CSharp.csproj", "{03335077-6E97-AE73-6069-DBEADDE2CA0B}"
 EndProject
 Project("{01568A56-34CC-846F-A1AD-D30AF1938769}") = "ProceduralMapGenerator", "Assembly-CSharp-Editor.csproj", "{790CD384-4B20-6DB2-91C3-D2CA906FB56F}"
@@ -11,6 +13,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{83A86F1C-BC24-7270-61CE-2B6C0A23F70C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83A86F1C-BC24-7270-61CE-2B6C0A23F70C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83A86F1C-BC24-7270-61CE-2B6C0A23F70C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83A86F1C-BC24-7270-61CE-2B6C0A23F70C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{03335077-6E97-AE73-6069-DBEADDE2CA0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{03335077-6E97-AE73-6069-DBEADDE2CA0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03335077-6E97-AE73-6069-DBEADDE2CA0B}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -85,9 +85,11 @@ public class EndlessTerrain : MonoBehaviour {
 
 		MeshRenderer meshRenderer;
 		MeshFilter meshFilter;
+		MeshCollider meshCollider;
 
 		LODInfo[] detailLevels;
 		LODMesh[] lodMeshes;
+		LODMesh collisionLODMesh;
 
 		MapData mapData;
 		bool mapDataReceived;
@@ -111,6 +113,7 @@ public class EndlessTerrain : MonoBehaviour {
 			meshObject = new GameObject("Terrain Chunk");
 			meshRenderer = meshObject.AddComponent<MeshRenderer>();
 			meshFilter = meshObject.AddComponent<MeshFilter>();
+			meshCollider = meshObject.AddComponent<MeshCollider>();
 			meshRenderer.material = material;
 
 			meshObject.transform.position = positionV3 * scale;
@@ -121,6 +124,9 @@ public class EndlessTerrain : MonoBehaviour {
 			lodMeshes = new LODMesh[detailLevels.Length];
 			for (int i = 0; i < detailLevels.Length; i++) {
 				lodMeshes[i] = new LODMesh(detailLevels[i].lod, UpdateTerrainChunk);
+				if (detailLevels[i].useForCollider) {
+					collisionLODMesh = lodMeshes[i];
+				}
 			}
 
 			// Ask for map data by threading.
@@ -164,11 +170,20 @@ public class EndlessTerrain : MonoBehaviour {
 					// We need to change the level of detail of the mesh
 					if (lodIndex != previousLODIndex) {
 						LODMesh lodMesh = lodMeshes [lodIndex];
-						if (lodMesh.hasMesh) {
+						if (lodMesh.hasMesh) { // Mesh is recieved
 							previousLODIndex = lodIndex;
 							meshFilter.mesh = lodMesh.mesh; // Mesh exists, so draw it
 						} else if (!lodMesh.hasRequestedMesh) {
 							lodMesh.RequestMesh (mapData); // Request mesh
+						}
+					}
+
+					// If were within range, create collision mesh
+					if (lodIndex == 0) {
+						if (collisionLODMesh.hasMesh) { // Mesh is recieved
+							meshCollider.sharedMesh = collisionLODMesh.mesh;
+						} else if (!collisionLODMesh.hasRequestedMesh) {
+							collisionLODMesh.RequestMesh (mapData); // Request mesh
 						}
 					}
 
@@ -244,5 +259,6 @@ public class EndlessTerrain : MonoBehaviour {
 	public struct LODInfo {
 		public int lod;
 		public float visibleDstThreshold;
+		public bool useForCollider;
 	}
 }
