@@ -154,9 +154,14 @@ public class MapGenerator : MonoBehaviour {
 					if (terrainData.useFalloff) { // Could be cleaned up
 						noiseMap [x, y] = Mathf.Clamp01 (noiseMap [x, y] - falloffMap [x, y]);
 					}
+
 				}
 			}
+
 		}
+
+		// Feed the world height into our custom terrain material
+		textureData.UpdateMeshHeights (terrainMaterial, terrainData.minHeight, terrainData.maxHeight);
 
 		return new MapData (noiseMap);
 	}
